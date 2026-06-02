@@ -7,12 +7,17 @@ import type { Studio, User } from '@/types'
 interface SettingsViewProps {
   studio: Studio
   members: User[]
+  canResetPassword: boolean
 }
 
-export default function SettingsView({ studio, members }: SettingsViewProps) {
+export default function SettingsView({ studio, members, canResetPassword }: SettingsViewProps) {
   const [studioName, setStudioName] = useState(studio.name)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
 
   async function saveStudioName() {
     if (!studioName.trim()) {
@@ -31,6 +36,32 @@ export default function SettingsView({ studio, members }: SettingsViewProps) {
 
     setIsSaving(false)
     setMessage(error ? error.message : 'Studio name updated.')
+  }
+
+  async function resetOwnerPassword() {
+    if (newPassword.length < 6) {
+      setPasswordMessage('Use at least 6 characters.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('Passwords do not match.')
+      return
+    }
+
+    setIsPasswordSaving(true)
+    setPasswordMessage(null)
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+
+    setIsPasswordSaving(false)
+    setPasswordMessage(error ? error.message : 'Owner password updated.')
+
+    if (!error) {
+      setNewPassword('')
+      setConfirmPassword('')
+    }
   }
 
   const settings = studio.settings ?? {
@@ -78,6 +109,50 @@ export default function SettingsView({ studio, members }: SettingsViewProps) {
           Managed from the sidebar gear icon.
         </p>
       </section>
+
+      {canResetPassword && (
+        <section className="surface" style={{ padding: '18px', display: 'grid', gap: '14px' }}>
+          <div>
+            <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 600 }}>Owner Access Password</h2>
+            <p style={{ color: 'var(--muted)', fontSize: '12px', marginTop: '4px' }}>
+              Change the password used for this studio owner login.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            <label style={{ display: 'grid', gap: '6px', color: 'var(--muted)', fontSize: '12px' }}>
+              New password
+              <input
+                type="password"
+                value={newPassword}
+                onChange={event => setNewPassword(event.target.value)}
+                autoComplete="new-password"
+                style={inputStyle}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '6px', color: 'var(--muted)', fontSize: '12px' }}>
+              Confirm password
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={event => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+                style={inputStyle}
+              />
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => void resetOwnerPassword()}
+              disabled={isPasswordSaving}
+              style={primaryButtonStyle}
+            >
+              {isPasswordSaving ? 'Updating...' : 'Update password'}
+            </button>
+            {passwordMessage && <span style={{ color: 'var(--muted)', fontSize: '12px' }}>{passwordMessage}</span>}
+          </div>
+        </section>
+      )}
 
       <section className="surface" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '18px', borderBottom: '1px solid var(--border)' }}>

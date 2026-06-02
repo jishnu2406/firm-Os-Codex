@@ -11,7 +11,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('firmos_users')
-    .select('studio_id')
+    .select('id, studio_id, role')
     .eq('id', user.id)
     .single()
 
@@ -36,6 +36,7 @@ export default async function SettingsPage() {
     <SettingsView
       studio={studioResult.data as Studio}
       members={(membersResult.data ?? []) as User[]}
+      canResetPassword={profile.role === 'OWNER'}
     />
   )
 }

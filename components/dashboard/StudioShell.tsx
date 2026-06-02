@@ -54,7 +54,7 @@ export default function StudioShell({ user, studio, subscription, studioSlug, ch
       background: 'var(--bg)', fontFamily: 'var(--font-family)',
     }}>
       {/* ── Subscription Gate Overlay ── */}
-      {isSubscriptionBlocked && activeSection !== 'billing' && (
+      {isSubscriptionBlocked && activeSection !== 'billing' && activeSection !== 'settings' && (
         <SubscriptionGate
           studio={studio}
           studioSlug={studioSlug}

@@ -105,6 +105,7 @@ export async function middleware(request: NextRequest) {
   // ── Subscription gating (skip for billing/expired routes)
   const isExemptRoute =
     pathname.endsWith('/billing') ||
+    pathname.endsWith('/settings') ||
     pathname.includes('/subscription') ||
     pathname.startsWith('/subscription-expired')
 
