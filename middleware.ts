@@ -5,6 +5,7 @@
 
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getSupabasePublishableKey, getSupabaseUrl } from '@/lib/supabase/config'
 
 const PUBLIC_ROUTES = ['/auth', '/auth/callback', '/setup-firm', '/subscription-expired']
 const STATIC_PREFIXES = ['/_next', '/favicon', '/public', '/api/webhooks']
@@ -23,10 +24,18 @@ export async function middleware(request: NextRequest) {
 
   // Create Supabase client with cookie-based session management
   let response = NextResponse.next({ request })
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseKey = getSupabasePublishableKey()
+
+  if (!supabaseUrl || !supabaseKey || !isValidHttpUrl(supabaseUrl)) {
+    const loginUrl = new URL('/auth', request.url)
+    loginUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -141,7 +150,11 @@ export async function middleware(request: NextRequest) {
 // ──────────────────────────────────────────────────────────
 // Subscription block logic with grace period
 // ──────────────────────────────────────────────────────────
-function isSubscriptionBlocked(subscription: any): boolean {
+function isSubscriptionBlocked(subscription: {
+  status?: string | null
+  expires_at?: string | null
+  grace_period_ends_at?: string | null
+} | null): boolean {
   if (!subscription) return true // No subscription = blocked
 
   const { status, expires_at, grace_period_ends_at } = subscription
@@ -155,10 +168,20 @@ function isSubscriptionBlocked(subscription: any): boolean {
     if (grace_period_ends_at) {
       return new Date() > new Date(grace_period_ends_at)
     }
+    if (!expires_at) return true
     return new Date() > new Date(expires_at)
   }
 
   return true
+}
+
+function isValidHttpUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 export const config = {
