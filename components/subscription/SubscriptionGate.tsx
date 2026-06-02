@@ -87,7 +87,7 @@ export default function SubscriptionGate({ studio, studioSlug, subscription }: P
             fontSize: '36px', fontWeight: '300',
             color: 'var(--text)', letterSpacing: '-0.03em',
             marginBottom: '12px', lineHeight: 1.1,
-            fontFamily: '"Cormorant Garamond", Georgia, serif',
+            fontFamily: 'var(--font-cormorant), Georgia, serif',
           }}>
             {isHold ? 'Account on Hold' : 'Subscription Expired'}
           </h1>

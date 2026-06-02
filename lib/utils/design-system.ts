@@ -150,7 +150,7 @@ export const FONTS: FontConfig[] = [
   {
     id: 'dm-sans',
     label: 'DM Sans',
-    family: '"DM Sans", sans-serif',
+    family: 'var(--font-dm-sans), sans-serif',
     category: 'sans',
     specimen: 'Design in motion',
   },
@@ -192,14 +192,14 @@ export const FONTS: FontConfig[] = [
   {
     id: 'cormorant',
     label: 'Cormorant',
-    family: '"Cormorant Garamond", Georgia, serif',
+    family: 'var(--font-cormorant), Georgia, serif',
     category: 'serif',
     specimen: 'Elegant refinement',
   },
   {
     id: 'instrument-serif',
     label: 'Instrument Serif',
-    family: '"Instrument Serif", Georgia, serif',
+    family: 'var(--font-instrument-serif), Georgia, serif',
     category: 'serif',
     specimen: 'Sharp and defined',
   },
