@@ -6,6 +6,7 @@
 
 import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getSupabaseConfig } from '@/lib/supabase/config'
 import { useSearchParams } from 'next/navigation'
 
 export default function AuthPage() {
@@ -27,17 +28,25 @@ function AuthPageContent() {
     setError(null)
 
     try {
+      await ensureGoogleProviderEnabled()
       const supabase = createClient()
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
-          queryParams: { access_type: 'offline', prompt: 'consent' },
-        },
-      })
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
+            queryParams: { access_type: 'offline', prompt: 'consent' },
+            skipBrowserRedirect: true,
+          },
+        }),
+        8000
+      )
       if (error) throw error
-    } catch {
-      setError('Authentication failed. Please try again.')
+      if (!data.url) throw new Error('Google sign-in is not enabled in Supabase.')
+      window.location.assign(data.url)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Authentication failed. Please try again.'
+      setError(message)
       setIsLoading(false)
     }
   }
@@ -174,4 +183,41 @@ function AuthPageContent() {
       `}</style>
     </div>
   )
+}
+
+async function ensureGoogleProviderEnabled() {
+  const { url, publishableKey } = getSupabaseConfig()
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 5000)
+
+  try {
+    const response = await fetch(`${url}/auth/v1/settings`, {
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${publishableKey}`,
+      },
+      signal: controller.signal,
+    })
+
+    if (!response.ok) return
+
+    const settings = await response.json() as { external?: { google?: boolean } }
+    if (!settings.external?.google) {
+      throw new Error('Google sign-in is not enabled in Supabase. Enable Authentication > Providers > Google.')
+    }
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error('Google sign-in is not enabled in Supabase or the provider request timed out.')),
+        timeoutMs
+      )
+    }),
+  ])
 }
