@@ -31,7 +31,7 @@ export default function ProjectsView({ initialProjects, studioId, userId }: Proj
 
     const supabase = createClient()
     const { data, error } = await supabase
-      .from('projects')
+      .from('firmos_projects')
       .insert({
         name: name.trim(),
         status,

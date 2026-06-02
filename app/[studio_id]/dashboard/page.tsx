@@ -14,7 +14,7 @@ export default async function DashboardPage({
   if (!user) redirect('/auth')
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('firmos_users')
     .select('studio_id, role')
     .eq('id', user.id)
     .single()
@@ -23,9 +23,9 @@ export default async function DashboardPage({
 
   // Parallel data fetching
   const [projectsResult, filesResult, membersResult] = await Promise.all([
-    supabase.from('projects').select('id, name, status, created_at').eq('studio_id', profile.studio_id).order('created_at', { ascending: false }).limit(10),
+    supabase.from('firmos_projects').select('id, name, status, created_at').eq('studio_id', profile.studio_id).order('created_at', { ascending: false }).limit(10),
     supabase.from('file_vault').select('id, file_name, file_type, file_size, created_at, ai_category').eq('studio_id', profile.studio_id).order('created_at', { ascending: false }).limit(8),
-    supabase.from('users').select('id, full_name, role, avatar_url, last_seen_at').eq('studio_id', profile.studio_id),
+    supabase.from('firmos_users').select('id, full_name, role, avatar_url, last_seen_at').eq('studio_id', profile.studio_id),
   ])
 
   const projects = projectsResult.data ?? []

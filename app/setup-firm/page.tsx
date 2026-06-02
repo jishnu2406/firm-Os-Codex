@@ -66,7 +66,7 @@ export default function SetupFirmPage() {
 
     // Assign user as OWNER
     await supabase
-      .from('users')
+      .from('firmos_users')
       .update({ studio_id: studio.id, role: 'OWNER' })
       .eq('id', user.id)
 
@@ -111,7 +111,7 @@ export default function SetupFirmPage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('users').update({ onboarded: true }).eq('id', user.id)
+      await supabase.from('firmos_users').update({ onboarded: true }).eq('id', user.id)
     }
     setStep('done')
     setTimeout(() => router.push(`/${createdStudio!.slug}/dashboard`), 1500)

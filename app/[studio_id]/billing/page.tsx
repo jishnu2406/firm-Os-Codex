@@ -11,7 +11,7 @@ export default async function BillingPage() {
   if (!user) redirect('/auth')
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('firmos_users')
     .select('studio_id')
     .eq('id', user.id)
     .single()

@@ -14,7 +14,7 @@ CREATE POLICY "studio_upload" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'firm-vault' AND
     (storage.foldername(name))[1] = (
-      SELECT studio_id::text FROM public.users WHERE id = auth.uid()
+      SELECT studio_id::text FROM public.firmos_users WHERE id = auth.uid()
     )
   );
 
@@ -23,7 +23,7 @@ CREATE POLICY "studio_read" ON storage.objects
   FOR SELECT USING (
     bucket_id = 'firm-vault' AND
     (storage.foldername(name))[1] = (
-      SELECT studio_id::text FROM public.users WHERE id = auth.uid()
+      SELECT studio_id::text FROM public.firmos_users WHERE id = auth.uid()
     )
   );
 
@@ -32,6 +32,6 @@ CREATE POLICY "studio_delete" ON storage.objects
   FOR DELETE USING (
     bucket_id = 'firm-vault' AND
     (storage.foldername(name))[1] = (
-      SELECT studio_id::text FROM public.users WHERE id = auth.uid()
+      SELECT studio_id::text FROM public.firmos_users WHERE id = auth.uid()
     )
   );

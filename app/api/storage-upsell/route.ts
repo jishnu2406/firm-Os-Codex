@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Verify user is OWNER/ADMIN of this studio
     const { data: userProfile } = await supabase
-      .from('users')
+      .from('firmos_users')
       .select('role, studio_id')
       .eq('id', user.id)
       .single()

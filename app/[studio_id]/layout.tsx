@@ -17,7 +17,7 @@ export default async function StudioLayout({
   if (!user) redirect('/auth')
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('firmos_users')
     .select('*')
     .eq('id', user.id)
     .single()

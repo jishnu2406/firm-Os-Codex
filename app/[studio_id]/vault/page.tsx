@@ -15,7 +15,7 @@ export default async function VaultPage({
   if (!user) redirect('/auth')
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('firmos_users')
     .select('studio_id')
     .eq('id', user.id)
     .single()

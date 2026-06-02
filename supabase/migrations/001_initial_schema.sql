@@ -48,7 +48,7 @@ CREATE INDEX idx_studios_slug ON studios(slug);
 -- USERS (Studio members with role-based access)
 -- ============================================================
 
-CREATE TABLE users (
+CREATE TABLE firmos_users (
   id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email           TEXT UNIQUE NOT NULL,
   full_name       TEXT NOT NULL DEFAULT '',
@@ -62,20 +62,20 @@ CREATE TABLE users (
   preferences     JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
-CREATE INDEX idx_users_studio_id ON users(studio_id);
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_firmos_users_studio_id ON firmos_users(studio_id);
+CREATE INDEX idx_firmos_users_email ON firmos_users(email);
 
 -- ============================================================
 -- PROJECTS
 -- ============================================================
 
-CREATE TABLE projects (
+CREATE TABLE firmos_projects (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name            TEXT NOT NULL,
   description     TEXT,
   status          project_status NOT NULL DEFAULT 'DRAFT',
   studio_id       UUID NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
-  created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_by      UUID REFERENCES firmos_users(id) ON DELETE SET NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   due_date        DATE,
@@ -84,8 +84,8 @@ CREATE TABLE projects (
   metadata        JSONB DEFAULT '{}'::jsonb
 );
 
-CREATE INDEX idx_projects_studio_id ON projects(studio_id);
-CREATE INDEX idx_projects_status ON projects(studio_id, status);
+CREATE INDEX idx_firmos_projects_studio_id ON firmos_projects(studio_id);
+CREATE INDEX idx_firmos_projects_status ON firmos_projects(studio_id, status);
 
 -- ============================================================
 -- FILE VAULT
@@ -99,9 +99,9 @@ CREATE TABLE file_vault (
   file_size       BIGINT NOT NULL DEFAULT 0,  -- bytes
   file_type       file_type NOT NULL DEFAULT 'OTHER',
   mime_type       TEXT,
-  project_id      UUID REFERENCES projects(id) ON DELETE SET NULL,
+  project_id      UUID REFERENCES firmos_projects(id) ON DELETE SET NULL,
   studio_id       UUID NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
-  uploaded_by     UUID REFERENCES users(id) ON DELETE SET NULL,
+  uploaded_by     UUID REFERENCES firmos_users(id) ON DELETE SET NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ai_summary      TEXT,                       -- AI-generated summary
   ai_tags         TEXT[] DEFAULT '{}',        -- AI-generated tags
@@ -164,7 +164,7 @@ CREATE INDEX idx_storage_addons_studio ON storage_addons(studio_id);
 CREATE TABLE audit_log (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   studio_id       UUID REFERENCES studios(id) ON DELETE CASCADE,
-  user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
+  user_id         UUID REFERENCES firmos_users(id) ON DELETE SET NULL,
   action          TEXT NOT NULL,
   resource_type   TEXT,
   resource_id     UUID,
@@ -180,8 +180,8 @@ CREATE INDEX idx_audit_log_studio ON audit_log(studio_id, created_at DESC);
 -- ============================================================
 
 ALTER TABLE studios ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE firmos_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE firmos_projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE file_vault ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE storage_addons ENABLE ROW LEVEL SECURITY;
@@ -190,13 +190,13 @@ ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 -- Helper function: get current user's studio_id
 CREATE OR REPLACE FUNCTION get_my_studio_id()
 RETURNS UUID LANGUAGE sql STABLE AS $$
-  SELECT studio_id FROM users WHERE id = auth.uid()
+  SELECT studio_id FROM firmos_users WHERE id = auth.uid()
 $$;
 
 -- Helper function: get current user's role
 CREATE OR REPLACE FUNCTION get_my_role()
 RETURNS user_role LANGUAGE sql STABLE AS $$
-  SELECT role FROM users WHERE id = auth.uid()
+  SELECT role FROM firmos_users WHERE id = auth.uid()
 $$;
 
 -- Studios: members can view their studio
@@ -210,32 +210,32 @@ CREATE POLICY "studio_update" ON studios
   );
 
 -- Users: members see only studio peers
-CREATE POLICY "users_select" ON users
+CREATE POLICY "firmos_users_select" ON firmos_users
   FOR SELECT USING (studio_id = get_my_studio_id());
 
-CREATE POLICY "users_update_own" ON users
+CREATE POLICY "firmos_users_update_own" ON firmos_users
   FOR UPDATE USING (id = auth.uid());
 
-CREATE POLICY "users_update_admin" ON users
+CREATE POLICY "firmos_users_update_admin" ON firmos_users
   FOR UPDATE USING (
     studio_id = get_my_studio_id() AND 
     get_my_role() IN ('OWNER', 'ADMIN')
   );
 
-CREATE POLICY "users_insert" ON users
+CREATE POLICY "firmos_users_insert" ON firmos_users
   FOR INSERT WITH CHECK (TRUE); -- controlled by trigger
 
 -- Projects: full isolation per studio
-CREATE POLICY "projects_select" ON projects
+CREATE POLICY "firmos_projects_select" ON firmos_projects
   FOR SELECT USING (studio_id = get_my_studio_id());
 
-CREATE POLICY "projects_insert" ON projects
+CREATE POLICY "firmos_projects_insert" ON firmos_projects
   FOR INSERT WITH CHECK (studio_id = get_my_studio_id());
 
-CREATE POLICY "projects_update" ON projects
+CREATE POLICY "firmos_projects_update" ON firmos_projects
   FOR UPDATE USING (studio_id = get_my_studio_id());
 
-CREATE POLICY "projects_delete" ON projects
+CREATE POLICY "firmos_projects_delete" ON firmos_projects
   FOR DELETE USING (
     studio_id = get_my_studio_id() AND 
     get_my_role() IN ('OWNER', 'ADMIN', 'MANAGER')
@@ -293,9 +293,9 @@ $$;
 
 CREATE TRIGGER trg_studios_updated BEFORE UPDATE ON studios
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_users_updated BEFORE UPDATE ON users
+CREATE TRIGGER trg_firmos_users_updated BEFORE UPDATE ON firmos_users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_projects_updated BEFORE UPDATE ON projects
+CREATE TRIGGER trg_firmos_projects_updated BEFORE UPDATE ON firmos_projects
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- Auto-sync storage usage when files added/removed
@@ -354,7 +354,7 @@ $$;
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  INSERT INTO users (id, email, full_name, avatar_url)
+  INSERT INTO firmos_users (id, email, full_name, avatar_url)
   VALUES (
     NEW.id,
     NEW.email,
@@ -391,7 +391,7 @@ LEFT JOIN subscriptions sub ON sub.studio_id = s.id
 ORDER BY sub.expires_at DESC NULLS LAST;
 
 COMMENT ON TABLE studios IS 'Root tenant entity — one per design studio';
-COMMENT ON TABLE users IS 'Studio members with role-based access control';
-COMMENT ON TABLE projects IS 'Design projects scoped per studio';
+COMMENT ON TABLE firmos_users IS 'Studio members with role-based access control';
+COMMENT ON TABLE firmos_projects IS 'Design projects scoped per studio';
 COMMENT ON TABLE file_vault IS 'Secure asset storage with AI enrichment';
 COMMENT ON TABLE subscriptions IS 'Billing and license management';

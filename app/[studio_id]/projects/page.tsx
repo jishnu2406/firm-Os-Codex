@@ -10,7 +10,7 @@ export default async function ProjectsPage() {
   if (!user) redirect('/auth')
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('firmos_users')
     .select('studio_id')
     .eq('id', user.id)
     .single()
@@ -18,7 +18,7 @@ export default async function ProjectsPage() {
   if (!profile?.studio_id) redirect('/setup-firm')
 
   const { data: projects } = await supabase
-    .from('projects')
+    .from('firmos_projects')
     .select('*')
     .eq('studio_id', profile.studio_id)
     .order('created_at', { ascending: false })

@@ -283,8 +283,8 @@ export interface Database {
   public: {
     Tables: {
       studios: SupabaseTable<Studio>
-      users: SupabaseTable<User>
-      projects: SupabaseTable<Project>
+      firmos_users: SupabaseTable<User>
+      firmos_projects: SupabaseTable<Project>
       file_vault: SupabaseTable<FileVaultEntry>
       subscriptions: SupabaseTable<Subscription>
       storage_addons: SupabaseTable<StorageAddon>
